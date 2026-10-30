@@ -1,12 +1,25 @@
+
 import os
-from fastapi import FastAPI, HTTPException
+import re
+import unicodedata
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-APP_ORIGIN = os.getenv("ALLOWED_ORIGIN", "https://it-mf.github.io")
+APP_ORIGIN = os.getenv(
+    "ALLOWED_ORIGIN",
+    "https://it-mf.github.io"
+)
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
-app = FastAPI(title="TaxHelper Rwanda API", version="1.1.0")
+RRA_URL = "https://www.rra.gov.rw/"
+RRA_PHONE = "3004"
+
+app = FastAPI(
+    title="TaxHelper Rwanda API",
+    version="1.2.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,80 +39,289 @@ class ChatResponse(BaseModel):
     answer: str
 
 
-# This no-key fallback intentionally gives general guidance only.
-# It avoids hard-coding tax rates or deadlines that may change.
+# General educational guidance.
+# Current tax rates and deadlines are deliberately not hard-coded.
 FAQ = {
     "registration": {
-        "rw": "Kwandikisha ubucuruzi bikorwa binyuze muri Rwanda Development Board (RDB). Nyuma yo kwandikisha ubucuruzi, amakuru ajyanye na TIN n'inshingano z'imisoro aboneka binyuze muri RDB na Rwanda Revenue Authority (RRA). Ibisabwa bishobora guterwa n'ubwoko bw'ubucuruzi. Reba https://www.rdb.rw/ cyangwa https://www.rra.gov.rw/ kugira ngo ubone amakuru agezweho.",
-        "en": "Business registration is handled through the Rwanda Development Board (RDB). After registration, check with RDB and the Rwanda Revenue Authority (RRA) about your TIN and applicable tax obligations. Requirements depend on the type of activity. See https://www.rdb.rw/ and https://www.rra.gov.rw/ for current guidance."
+        "rw": (
+            "Kwandikisha ubucuruzi mu Rwanda bikorwa binyuze muri Rwanda "
+            "Development Board (RDB). Nyuma yo kwandikisha ubucuruzi, "
+            "ugomba kumenya inshingano z'imisoro bireba ibikorwa byawe. "
+            "Ibisabwa bishobora guterwa n'ubwoko bw'ubucuruzi. "
+            "Reba RDB kuri https://www.rdb.rw/ na RRA kuri "
+            f"{RRA_URL} kugira ngo ubone amakuru agezweho."
+        ),
+        "en": (
+            "Business registration in Rwanda is handled through the "
+            "Rwanda Development Board (RDB). After registration, check "
+            "which tax obligations apply to your business activity. "
+            "Requirements may vary depending on the type of business. "
+            f"Visit https://www.rdb.rw/ and {RRA_URL} "
+            "for current official guidance."
+        )
     },
+
     "tin": {
-        "rw": "TIN ni nimero iranga usora. Ku bijyanye no kuyibona cyangwa kuyimenya, koresha serivisi zemewe za RRA cyangwa ubaze RRA kuri 3004. Ntugashyire TIN yawe cyangwa indangamuntu yawe hano muri chat.",
-        "en": "A TIN is a taxpayer identification number. To obtain or verify it, use RRA's official services or contact RRA on 3004. Do not share your TIN or national ID in this chat."
+        "rw": (
+            "TIN ni nimero iranga umusoreshwa (Taxpayer Identification "
+            "Number). Ku bijyanye no kuyibona cyangwa kuyigenzura, "
+            f"koresha serivisi za RRA cyangwa uhamagare {RRA_PHONE}. "
+            "Ntugashyire TIN yawe cyangwa indangamuntu yawe muri iyi chat."
+        ),
+        "en": (
+            "TIN means Taxpayer Identification Number. To obtain or "
+            f"verify it, use official RRA services or call {RRA_PHONE}. "
+            "Do not share your TIN or national ID in this chat."
+        )
     },
+
     "vat": {
-        "rw": "VAT ni umusoro ku nyongeragaciro. Ibisabwa kwiyandikisha, ibicuruzwa cyangwa serivisi bisoreshwa, n'igihe cyo kumenyekanisha biterwa n'amategeko agezweho n'ubwoko bw'ubucuruzi. Reba ibisobanuro bya RRA kuri https://www.rra.gov.rw/ mbere yo gufata icyemezo.",
-        "en": "VAT is a tax on the value added to taxable goods and services. Registration requirements, taxable supplies and filing dates depend on current law and the business situation. Check the latest RRA guidance at https://www.rra.gov.rw/ before acting."
+        "rw": (
+            "VAT ni umusoro ku nyongeragaciro. Ujyanye n'ibicuruzwa "
+            "na serivisi bisoreshwa. Ibisabwa kwiyandikisha, uko "
+            "ubarwa n'igihe cyo kuwumenyekanisha biterwa n'amategeko "
+            "agezweho n'ubwoko bw'ubucuruzi. Reba amakuru ya RRA kuri "
+            f"{RRA_URL} cyangwa uhamagare {RRA_PHONE}."
+        ),
+        "en": (
+            "VAT is a tax on the value added to taxable goods and "
+            "services. Registration requirements, calculations and "
+            "filing obligations depend on current law and the type "
+            f"of business. Check {RRA_URL} or call {RRA_PHONE}."
+        )
     },
+
     "ebm": {
-        "rw": "EBM ni uburyo bwemewe bwo gutanga inyemezabuguzi z'ibicuruzwa cyangwa serivisi bisoreshwa. Niba utazi niba ubucuruzi bwawe bugomba gukoresha EBM cyangwa uko wayikoresha, saba ubufasha bwa RRA kuri 3004 cyangwa urebe https://www.rra.gov.rw/.",
-        "en": "EBM is the electronic invoicing system used for issuing compliant invoices for taxable transactions. To confirm whether your business must use it or how to use it, contact RRA on 3004 or visit https://www.rra.gov.rw/."
+        "rw": (
+            "EBM ni uburyo bw'ikoranabuhanga bwo gutanga inyemezabuguzi "
+            "zemewe ku bikorwa bisoreshwa. Kugira ngo umenye niba "
+            "ubucuruzi bwawe bugomba gukoresha EBM n'uko ikoreshwa, "
+            f"reba {RRA_URL} cyangwa uhamagare {RRA_PHONE}."
+        ),
+        "en": (
+            "EBM is an electronic system used to issue compliant "
+            "invoices for taxable transactions. To confirm whether "
+            "your business must use EBM and how it works, visit "
+            f"{RRA_URL} or call {RRA_PHONE}."
+        )
     },
+
     "income": {
-        "rw": "Umusoro ku nyungu uterwa n'ubwoko bw'umusoro, amafaranga winjiza, n'uburyo ubucuruzi bwawe busoreshwamo. Ibipimo n'amatariki bishobora guhinduka, bityo TaxHelper ntitanga igipimo cyangwa umubare utagenzuwe. Reba amakuru agezweho kuri https://www.rra.gov.rw/ cyangwa ubaze RRA kuri 3004.",
-        "en": "Income tax depends on the tax category, income and applicable tax regime. Rates and deadlines can change, so TaxHelper will not guess an unverified rate or amount. Check current guidance at https://www.rra.gov.rw/ or contact RRA on 3004."
+        "rw": (
+            "Umusoro ku nyungu uterwa n'ubwoko bw'ubucuruzi, amafaranga "
+            "winjiza n'icyiciro cy'umusoro urimo. Ibipimo bishobora "
+            "guhinduka. TaxHelper ntitanga igipimo cyangwa umubare "
+            "utagenzuwe. Reba amakuru agezweho kuri "
+            f"{RRA_URL} cyangwa uhamagare {RRA_PHONE}."
+        ),
+        "en": (
+            "Income tax depends on the type of business, income and "
+            "applicable tax category. Rates may change. TaxHelper "
+            "does not provide unverified tax rates or calculations. "
+            f"Check {RRA_URL} or call {RRA_PHONE}."
+        )
     },
+
     "payroll": {
-        "rw": "PAYE ni umusoro ukatwa ku mushahara hakurikijwe amategeko agenga imishahara. Ibarura riterwa n'amafaranga y'umukozi n'amabwiriza agezweho. Kugira ngo umenye igipimo n'igihe cyo kumenyekanisha by'ubu, reba https://www.rra.gov.rw/ cyangwa ubaze RRA kuri 3004.",
-        "en": "PAYE is tax withheld from employment income under the applicable payroll tax rules. The calculation depends on the employee's pay and current rules. Check current rates and filing dates at https://www.rra.gov.rw/ or contact RRA on 3004."
+        "rw": (
+            "PAYE ni umusoro ku mushahara ukurikije amategeko agenga "
+            "imisoro ku bakozi. Ibarura riterwa n'amafaranga umukozi "
+            "ahembwa n'amabwiriza agezweho. Ku bipimo n'ibisabwa "
+            f"by'ubu, reba {RRA_URL} cyangwa uhamagare {RRA_PHONE}."
+        ),
+        "en": (
+            "PAYE is tax withheld from employment income under "
+            "applicable payroll tax rules. Its calculation depends "
+            "on employee earnings and current regulations. For "
+            f"current rates and requirements, visit {RRA_URL} "
+            f"or call {RRA_PHONE}."
+        )
     },
+
     "deadlines": {
-        "rw": "Amatariki ntarengwa yo kumenyekanisha no kwishyura imisoro aterwa n'ubwoko bw'umusoro n'icyiciro cy'usora. Kugira ngo wirinde amakuru ashaje, genzura ingengabihe iri kuri https://www.rra.gov.rw/ cyangwa ubaze RRA kuri 3004.",
-        "en": "Tax filing and payment deadlines depend on the tax type and taxpayer category. To avoid relying on outdated dates, check the current calendar at https://www.rra.gov.rw/ or contact RRA on 3004."
+        "rw": (
+            "Amatariki ntarengwa yo kumenyekanisha no kwishyura "
+            "imisoro aterwa n'ubwoko bw'umusoro n'icyiciro cy'usora. "
+            "Kugira ngo wirinde amakuru ashaje, genzura ingengabihe "
+            f"ya RRA kuri {RRA_URL} cyangwa uhamagare {RRA_PHONE}."
+        ),
+        "en": (
+            "Tax filing and payment deadlines depend on the tax "
+            "type and taxpayer category. To avoid outdated information, "
+            f"check the current RRA guidance at {RRA_URL} "
+            f"or call {RRA_PHONE}."
+        )
     },
+
     "help": {
-        "rw": "Ushobora kubaza RRA ibibazo bijyanye n'imisoro kuri telefone itishyurwa 3004. Nanone reba urubuga rwabo: https://www.rra.gov.rw/. Ntugashyire hano ijambo ry'ibanga, PIN, TIN, nimero y'indangamuntu cyangwa amakuru ya banki.",
-        "en": "For tax questions, contact the Rwanda Revenue Authority on toll-free number 3004 or visit https://www.rra.gov.rw/. Never share passwords, PINs, TINs, national ID numbers or bank details here."
+        "rw": (
+            f"Ushobora kubaza Rwanda Revenue Authority (RRA) kuri "
+            f"{RRA_PHONE}. Ushobora no gusura urubuga rwabo: {RRA_URL}. "
+            "Ntugashyire hano ijambo ry'ibanga, PIN, TIN, indangamuntu "
+            "cyangwa amakuru ya banki."
+        ),
+        "en": (
+            f"For official tax assistance, contact the Rwanda Revenue "
+            f"Authority (RRA) on {RRA_PHONE} or visit {RRA_URL}. "
+            "Never share passwords, PINs, TINs, national ID numbers "
+            "or bank details in this chat."
+        )
     }
 }
 
 
+def normalize_text(text: str) -> str:
+    """Normalize text for more reliable keyword matching."""
+    text = text.casefold().strip()
+    text = unicodedata.normalize("NFKC", text)
+    return re.sub(r"\s+", " ", text)
+
+
+def contains_keyword(text: str, keyword: str) -> bool:
+    """
+    Match whole words or phrases.
+    This prevents short terms such as 'tin' matching inside
+    unrelated words.
+    """
+    pattern = r"(?<!\w)" + re.escape(keyword) + r"(?!\w)"
+    return re.search(pattern, text) is not None
+
+
 def offline_answer(question: str, language: str) -> str:
-    q = question.casefold()
+    q = normalize_text(question)
 
     categories = [
-        ("registration", ["kwandikisha", "registration", "register", "business"]),
-        ("tin", ["tin", "nimero iranga", "taxpayer identification"]),
-        ("vat", ["vat", "value added", "nyongeragaciro"]),
-        ("ebm", ["ebm", "inyemezabuguzi", "invoice", "invoices"]),
-        ("payroll", ["paye", "umushahara", "salary", "payroll"]),
-        ("deadlines", ["igihe", "itariki", "deadline", "when to file", "due date"]),
-        ("income", ["income tax", "umusoro ku nyungu", "inyungu", "profit", "turnover"]),
-        ("help", ["rra", "ubufasha", "help", "contact", "telephone", "phone"]),
+        (
+            "registration",
+            [
+                "kwandikisha",
+                "kwandikisha ubucuruzi",
+                "registration",
+                "register",
+                "business registration",
+                "business"
+            ]
+        ),
+        (
+            "tin",
+            [
+                "tin",
+                "nimero iranga",
+                "nimero y'umusoro",
+                "taxpayer identification",
+                "tax identification number"
+            ]
+        ),
+        (
+            "vat",
+            [
+                "vat",
+                "value added tax",
+                "nyongeragaciro"
+            ]
+        ),
+        (
+            "ebm",
+            [
+                "ebm",
+                "inyemezabuguzi",
+                "invoice",
+                "invoices",
+                "electronic billing"
+            ]
+        ),
+        (
+            "payroll",
+            [
+                "paye",
+                "umushahara",
+                "imisoro ku mushahara",
+                "salary",
+                "payroll",
+                "employment tax"
+            ]
+        ),
+        (
+            "deadlines",
+            [
+                "deadline",
+                "deadlines",
+                "itariki",
+                "amatariki",
+                "igihe cyo kwishyura",
+                "igihe cyo kumenyekanisha",
+                "when to file",
+                "due date",
+                "filing date"
+            ]
+        ),
+        (
+            "income",
+            [
+                "income tax",
+                "umusoro ku nyungu",
+                "umusoro w'inyungu",
+                "profit tax",
+                "turnover tax"
+            ]
+        ),
+        (
+            "help",
+            [
+                "rra",
+                "ubufasha",
+                "help",
+                "contact",
+                "telephone",
+                "phone",
+                "amakuru"
+            ]
+        )
     ]
 
     for category, keywords in categories:
-        if any(word in q for word in keywords):
+        if any(contains_keyword(q, word) for word in keywords):
             return FAQ[category][language]
 
     if language == "rw":
         return (
-            "Murakoze kubaza TaxHelper Rwanda. Ubu ndimo gukoresha ububiko bw'ibisubizo by'ibanze, "
-            "bityo sinshobora gusuzuma ikibazo cyose nk'uko AI ibikora. Mushobora kubaza ku kwandikisha "
-            "ubucuruzi, TIN, VAT, EBM, PAYE cyangwa igihe cyo kumenyekanisha imisoro. "
-            "Ku bisobanuro byemewe kandi bigezweho, reba https://www.rra.gov.rw/ cyangwa uhamagare 3004."
+            "Murakoze kubaza TaxHelper Rwanda!\n\n"
+            "Ubu ndi gukoresha ububiko bw'ibisubizo by'ibanze. "
+            "Mushobora kumbaza kuri:\n"
+            "• Kwandikisha ubucuruzi\n"
+            "• TIN\n"
+            "• VAT\n"
+            "• EBM\n"
+            "• PAYE\n"
+            "• Umusoro ku nyungu\n"
+            "• Amatariki yo kumenyekanisha imisoro\n\n"
+            "Ku makuru yemewe kandi agezweho, sura "
+            f"{RRA_URL} cyangwa uhamagare {RRA_PHONE}."
         )
+
     return (
-        "Thank you for contacting TaxHelper Rwanda. The assistant is currently using its basic "
-        "offline FAQ, so it cannot analyse every question like the AI service. You can ask about "
-        "business registration, TIN, VAT, EBM, PAYE or filing deadlines. For authoritative and "
-        "up-to-date information, visit https://www.rra.gov.rw/ or call 3004."
+        "Thank you for contacting TaxHelper Rwanda!\n\n"
+        "I am currently using a basic offline FAQ. You can ask "
+        "about:\n"
+        "• Business registration\n"
+        "• TIN\n"
+        "• VAT\n"
+        "• EBM\n"
+        "• PAYE\n"
+        "• Income tax\n"
+        "• Tax filing deadlines\n\n"
+        "For current official information, visit "
+        f"{RRA_URL} or call {RRA_PHONE}."
     )
 
 
 @app.get("/")
 def root():
-    return {"service": "TaxHelper Rwanda API", "status": "running"}
+    return {
+        "service": "TaxHelper Rwanda API",
+        "status": "running",
+        "version": "1.2.0"
+    }
 
 
 @app.get("/health")
@@ -109,37 +331,70 @@ def health():
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest):
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return ChatResponse(answer=offline_answer(payload.question.strip(), payload.language))
+    question = payload.question.strip()
 
-    # Optional AI mode: imported only when a key is configured.
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    # Free offline mode when no Gemini key is configured.
+    if not api_key:
+        return ChatResponse(
+            answer=offline_answer(question, payload.language)
+        )
+
     try:
         from google import genai
         from google.genai import types
 
-        prompt_language = "Kinyarwanda" if payload.language == "rw" else "English"
-        system_instruction = (
-            "You are TaxHelper Rwanda, an educational assistant. Explain general Rwanda tax "
-            "concepts clearly. Do not invent current rates, deadlines or legal requirements. "
-            "Refer users to https://www.rra.gov.rw/ or RRA 3004 for current official guidance. "
-            "Do not request passwords, PINs, TINs, national ID numbers or bank details. "
-            "Do not claim to represent RRA or to submit or pay taxes."
+        prompt_language = (
+            "Kinyarwanda"
+            if payload.language == "rw"
+            else "English"
         )
+
+        system_instruction = """
+You are TaxHelper Rwanda, an educational assistant
+that explains general Rwanda tax information.
+
+Rules:
+1. Respond clearly and simply in the requested language.
+2. Never invent tax rates, deadlines, legal requirements
+   or government policies.
+3. If a question requires current official information,
+   direct the user to https://www.rra.gov.rw/
+   or RRA telephone number 3004.
+4. Do not pretend to access live RRA or NISR databases.
+5. Do not claim to represent RRA or another government institution.
+6. Do not claim to submit tax returns or make tax payments.
+7. Never request passwords, PINs, TINs, national ID numbers
+   or bank account details.
+8. If uncertain, say so clearly instead of guessing.
+9. Give educational explanations, not definitive legal advice.
+"""
+
         client = genai.Client(api_key=api_key)
+
         result = client.models.generate_content(
             model=MODEL,
-            contents=f"Respond in {prompt_language}.\nUser question: {payload.question.strip()}",
+            contents=(
+                f"Respond in {prompt_language}.\n"
+                f"User question: {question}"
+            ),
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.2,
-                max_output_tokens=500,
-            ),
+                max_output_tokens=500
+            )
         )
+
         answer = (result.text or "").strip()
+
         if not answer:
-            return ChatResponse(answer=offline_answer(payload.question.strip(), payload.language))
+            answer = offline_answer(question, payload.language)
+
         return ChatResponse(answer=answer)
+
     except Exception:
-        # Keep the public service useful if the optional AI provider is unavailable.
-        return ChatResponse(answer=offline_answer(payload.question.strip(), payload.language))
+        # Keep the service working if the optional AI service fails.
+        return ChatResponse(
+            answer=offline_answer(question, payload.language)
+        )
