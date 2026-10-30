@@ -161,6 +161,31 @@
       overflow-wrap: anywhere;
     }
 
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .chat-message {
+      max-width: 90%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .chat-message.assistant {
+      background: var(--light);
+      align-self: flex-start;
+    }
+
+    .chat-message.user {
+      background: #e5f0ff;
+      align-self: flex-end;
+    }
+
     .notice {
       padding: 12px;
       background: #fff8e7;
@@ -265,22 +290,15 @@
         <h2 data-i18n="questionsTitle">Baza ikibazo ku misoro</h2>
         <p data-i18n="questionsIntro">Hitamo ikibazo kugira ngo ubone igisubizo rusange.</p>
 
-        <label for="questionSelect" data-i18n="chooseQuestion">Hitamo ikibazo</label>
-        <select id="questionSelect">
-          <option value="register" data-i18n="qRegister">Nandikisha nte ubucuruzi?</option>
-          <option value="declaration" data-i18n="qDeclaration">Ni iki kumenyekanisha imisoro bivuze?</option>
-          <option value="vat" data-i18n="qVat">Umusoro ku nyongeragaciro ni iki?</option>
-          <option value="records" data-i18n="qRecords">Ni izihe nyandiko nkwiye kubika?</option>
-          <option value="payment" data-i18n="qPayment">Ni hehe nabonera amakuru yo kwishyura imisoro?</option>
-          <option value="other" data-i18n="qOther">Mfite ikindi kibazo</option>
-        </select>
-
-        <button class="action" onclick="answerQuestion()" data-i18n="getAnswer">Reba igisubizo</button>
-        <div id="answerResult" class="result" hidden aria-live="polite"></div>
-
-        <div class="notice" data-i18n="notAI">
-          Ibisubizo biri muri iyi ngerageza byateguwe mbere. Ntabwo ari ikiganiro n'ubwenge buhangano nyakuri.
+        <p data-i18n="chatIntro">Andika ikibazo cyawe ku misoro. Ushobora gukoresha Ikinyarwanda cyangwa English.</p>
+        <div id="chatMessages" class="chat-messages" aria-live="polite">
+          <div class="chat-message assistant" data-i18n="chatWelcome">Muraho! Ndi TaxHelper Rwanda AI. Nabafasha gusobanukirwa amakuru rusange ku misoro yo mu Rwanda.</div>
         </div>
+        <label for="chatQuestion" data-i18n="chatLabel">Andika ikibazo cyawe</label>
+        <textarea id="chatQuestion" maxlength="2000" placeholder="Urugero: Umusoro ku nyongeragaciro ni iki?"></textarea>
+        <button id="sendChatButton" class="action" onclick="sendChat()" data-i18n="sendButton">Ohereza ikibazo</button>
+        <p id="chatStatus" class="notice" hidden aria-live="polite"></p>
+        <p class="notice" data-i18n="chatDisclaimer">Ibisubizo ni amakuru rusange, si inama yemewe y'imisoro. Emeza amakuru agezweho kuri RRA.</p>
       </div>
     </section>
 
@@ -395,7 +413,15 @@
         qPayment: "Ni hehe nabonera amakuru yo kwishyura imisoro?",
         qOther: "Mfite ikindi kibazo",
         getAnswer: "Reba igisubizo",
-        notAI: "Ibisubizo biri muri iyi ngerageza byateguwe mbere. Ntabwo ari ikiganiro n'ubwenge buhangano nyakuri.",
+        chatIntro: "Andika ikibazo cyawe ku misoro. Ushobora gukoresha Ikinyarwanda cyangwa English.",
+        chatWelcome: "Muraho! Ndi TaxHelper Rwanda AI. Nabafasha gusobanukirwa amakuru rusange ku misoro yo mu Rwanda.",
+        chatLabel: "Andika ikibazo cyawe",
+        sendButton: "Ohereza ikibazo",
+        chatDisclaimer: "Ibisubizo ni amakuru rusange, si inama yemewe y'imisoro. Emeza amakuru agezweho kuri RRA.",
+        chatPlaceholder: "Urugero: Umusoro ku nyongeragaciro ni iki?",
+        chatThinking: "Ndimo gutegura igisubizo...",
+        chatError: "Habaye ikibazo mu kohereza ubutumwa. Ongera ugerageze nyuma.",
+        chatUnavailable: "AI ntiyashoboye gusubiza ubu. Reba API configuration cyangwa ugerageze nyuma.",
         recordsTitle: "Ibarura ry'amafaranga y'ubucuruzi",
         recordsIntro: "Andika amafaranga winjije n'ayo wakoresheje kugira ngo ubare inyungu cyangwa igihombo.",
         incomeLabel: "Amafaranga winjije (RWF)",
@@ -476,7 +502,15 @@
         qPayment: "Where can I find official tax payment information?",
         qOther: "I have another question",
         getAnswer: "View answer",
-        notAI: "The answers in this prototype are pre-written. This is not yet a real AI conversation.",
+        chatIntro: "Type your tax question. You can use Kinyarwanda or English.",
+        chatWelcome: "Hello! I am TaxHelper Rwanda AI. I can help explain general tax information in Rwanda.",
+        chatLabel: "Type your question",
+        sendButton: "Send question",
+        chatDisclaimer: "Responses are general information, not official tax advice. Confirm current information with the RRA.",
+        chatPlaceholder: "Example: What is Value Added Tax?",
+        chatThinking: "Preparing your answer...",
+        chatError: "There was a problem sending your message. Please try again.",
+        chatUnavailable: "The AI could not respond right now. Check the API configuration or try again later.",
         recordsTitle: "Business financial records",
         recordsIntro: "Enter your income and expenses to calculate your profit or loss.",
         incomeLabel: "Income (RWF)",
@@ -556,8 +590,18 @@
         }
       });
 
-      document.getElementById("answerResult").replaceChildren();
-      document.getElementById("answerResult").hidden = true;
+      const chatBox = document.getElementById("chatMessages");
+      if (chatBox) chatBox.replaceChildren();
+      if (chatBox) {
+        const welcome = document.createElement("div");
+        welcome.className = "chat-message assistant";
+        welcome.textContent = t("chatWelcome");
+        chatBox.appendChild(welcome);
+      }
+      const chatInput = document.getElementById("chatQuestion");
+      if (chatInput) chatInput.placeholder = t("chatPlaceholder");
+      const chatStatus = document.getElementById("chatStatus");
+      if (chatStatus) chatStatus.hidden = true;
 
       document.getElementById("calculationResult").replaceChildren();
       document.getElementById("calculationResult").hidden = true;
@@ -576,6 +620,56 @@
       });
 
       window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function addChatMessage(role, message) {
+      const box = document.getElementById("chatMessages");
+      const item = document.createElement("div");
+      item.className = "chat-message " + role;
+      item.textContent = message;
+      box.appendChild(item);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendChat() {
+      const input = document.getElementById("chatQuestion");
+      const button = document.getElementById("sendChatButton");
+      const status = document.getElementById("chatStatus");
+      const question = input.value.trim();
+
+      if (!question) {
+        status.textContent = currentLanguage === "rw" ? "Banza wandike ikibazo cyawe." : "Please type your question first.";
+        status.hidden = false;
+        return;
+      }
+
+      addChatMessage("user", question);
+      input.value = "";
+      button.disabled = true;
+      status.textContent = t("chatThinking");
+      status.hidden = false;
+
+      try {
+        const response = await fetch("https://taxhelper-rwanda-ai.onrender.com/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, language: currentLanguage })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.detail || "Chat request failed");
+        }
+        const answer = data.answer || data.response || data.message;
+        if (!answer) throw new Error("Empty response");
+        addChatMessage("assistant", answer);
+        status.hidden = true;
+      } catch (error) {
+        status.textContent = t("chatUnavailable");
+        status.hidden = false;
+      } finally {
+        button.disabled = false;
+        input.focus();
+      }
     }
 
     function answerQuestion() {
