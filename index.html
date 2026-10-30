@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaxHelper Rwanda AI</title>
+
+  <style>
+    :root {
+      --green: #087443;
+      --dark: #064e32;
+      --light: #eef8f1;
+      --white: #ffffff;
+      --text: #20352b;
+      --muted: #64756b;
+      --border: #dce9df;
+      --red: #b42318;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f8f5;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 15px 5%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand {
+      color: var(--green);
+      font-size: 21px;
+      font-weight: bold;
+    }
+
+    .language {
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      font-size: 15px;
+    }
+
+    nav {
+      background: var(--dark);
+      padding: 8px 5%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    nav button {
+      background: transparent;
+      color: white;
+      border: 0;
+      padding: 10px 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    nav button.active,
+    nav button:hover {
+      background: #147b4b;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 28px auto;
+      padding: 0 16px;
+      min-height: 65vh;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #075b37, #13844e);
+      color: white;
+      border-radius: 16px;
+      padding: 34px 25px;
+      margin-bottom: 22px;
+    }
+
+    .hero h1 {
+      margin-top: 0;
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1.25;
+    }
+
+    .hero p { max-width: 700px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .card h2, .card h3 { margin-top: 0; }
+
+    .card a {
+      color: var(--green);
+      overflow-wrap: anywhere;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin: 12px 0 5px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cbd9ce;
+      border-radius: 8px;
+      font-size: 16px;
+      background: white;
+      color: var(--text);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    button.action {
+      background: var(--green);
+      color: white;
+      border: 0;
+      padding: 12px 17px;
+      border-radius: 8px;
+      margin-top: 12px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    button.action:hover { background: var(--dark); }
+
+    .result {
+      margin-top: 16px;
+      padding: 15px;
+      background: var(--light);
+      border-radius: 8px;
+      overflow-wrap: anywhere;
+    }
+
+    .notice {
+      padding: 12px;
+      background: #fff8e7;
+      border-left: 4px solid #d99b19;
+      border-radius: 5px;
+      margin-top: 14px;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .check-row input {
+      width: auto;
+      margin-top: 5px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px 15px;
+      background: #eaf2eb;
+      color: #42584a;
+      font-size: 14px;
+    }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 550px) {
+      header { padding: 14px; }
+      nav { padding: 8px; }
+      nav button { flex: 1 1 42%; }
+      .hero { padding: 25px 18px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="brand">🌱 TaxHelper Rwanda AI</div>
+
+    <select
+      id="languageSelect"
+      class="language"
+      aria-label="Ururimi"
+      onchange="changeLanguage(this.value)">
+      <option value="rw">🇷🇼 Ikinyarwanda</option>
+      <option value="en">🇬🇧 English</option>
+    </select>
+  </header>
+
+  <nav>
+    <button class="active" data-page="home" onclick="showPage('home')" data-i18n="navHome">Ahabanza</button>
+    <button data-page="questions" onclick="showPage('questions')" data-i18n="navQuestions">Baza ikibazo</button>
+    <button data-page="records" onclick="showPage('records')" data-i18n="navRecords">Ibarura ry'ubucuruzi</button>
+    <button data-page="checklist" onclick="showPage('checklist')" data-i18n="navChecklist">Igenzura</button>
+    <button data-page="official" onclick="showPage('official')" data-i18n="navOfficial">Amakuru yemewe</button>
+  </nav>
+
+  <main>
+    <!-- AHABANZA -->
+    <section id="home" class="page">
+      <div class="hero">
+        <h1 data-i18n="heroTitle">Sobanukirwa imisoro, uteze imbere ubucuruzi bwawe</h1>
+        <p data-i18n="heroText">
+          Umufasha ugufasha kumenya amakuru rusange ku misoro, kubika ibarura
+          ry'ubucuruzi no kumenya aho wabonera amakuru yemewe.
+        </p>
+        <button class="action" onclick="showPage('questions')" data-i18n="startButton">Tangira hano</button>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3 data-i18n="feature1Title">💬 Ibibazo ku misoro</h3>
+          <p data-i18n="feature1Text">Reba ibisubizo by'ibibazo bikunze kubazwa ku misoro.</p>
+          <button class="action" onclick="showPage('questions')" data-i18n="learnMore">Reba ibisobanuro</button>
+        </div>
+
+        <div class="card">
+          <h3 data-i18n="feature2Title">📊 Ibarura ry'ubucuruzi</h3>
+          <p data-i18n="feature2Text">Gerageza kubara amafaranga winjije, ayo wakoresheje n'inyungu cyangwa igihombo.</p>
+          <button class="action" onclick="showPage('records')" data-i18n="calculateButton">Kora ibarura</button>
+        </div>
+
+        <div class="card">
+          <h3 data-i18n="feature3Title">✅ Igenzura ry'inshingano</h3>
+          <p data-i18n="feature3Text">Kora urutonde rw'ibintu wakwibuka kugenzura mu bucuruzi bwawe.</p>
+          <button class="action" onclick="showPage('checklist')" data-i18n="checkNow">Tangira igenzura</button>
+        </div>
+      </div>
+
+      <div class="notice" data-i18n="disclaimer">
+        Iyi porogaramu itanga amakuru rusange. Ntisimbura ubujyanama bwemewe bw'Ikigo cy'Imisoro n'Amahoro.
+      </div>
+    </section>
+
+    <!-- IBIBAZO -->
+    <section id="questions" class="page" hidden>
+      <div class="card">
+        <h2 data-i18n="questionsTitle">Baza ikibazo ku misoro</h2>
+        <p data-i18n="questionsIntro">Hitamo ikibazo kugira ngo ubone igisubizo rusange.</p>
+
+        <label for="questionSelect" data-i18n="chooseQuestion">Hitamo ikibazo</label>
+        <select id="questionSelect">
+          <option value="register" data-i18n="qRegister">Nandikisha nte ubucuruzi?</option>
+          <option value="declaration" data-i18n="qDeclaration">Ni iki kumenyekanisha imisoro bivuze?</option>
+          <option value="vat" data-i18n="qVat">Umusoro ku nyongeragaciro ni iki?</option>
+          <option value="records" data-i18n="qRecords">Ni izihe nyandiko nkwiye kubika?</option>
+          <option value="payment" data-i18n="qPayment">Ni hehe nabonera amakuru yo kwishyura imisoro?</option>
+          <option value="other" data-i18n="qOther">Mfite ikindi kibazo</option>
+        </select>
+
+        <button class="action" onclick="answerQuestion()" data-i18n="getAnswer">Reba igisubizo</button>
+        <div id="answerResult" class="result" hidden aria-live="polite"></div>
+
+        <div class="notice" data-i18n="notAI">
+          Ibisubizo biri muri iyi ngerageza byateguwe mbere. Ntabwo ari ikiganiro n'ubwenge buhangano nyakuri.
+        </div>
+      </div>
+    </section>
+
+    <!-- IBARURA -->
+    <section id="records" class="page" hidden>
+      <div class="card">
+        <h2 data-i18n="recordsTitle">Ibarura ry'amafaranga y'ubucuruzi</h2>
+        <p data-i18n="recordsIntro">Andika amafaranga winjije n'ayo wakoresheje kugira ngo ubare inyungu cyangwa igihombo.</p>
+
+        <label for="income" data-i18n="incomeLabel">Amafaranga winjije (RWF)</label>
+        <input id="income" type="number" min="0" step="1" placeholder="500000">
+
+        <label for="expenses" data-i18n="expensesLabel">Amafaranga wakoresheje (RWF)</label>
+        <input id="expenses" type="number" min="0" step="1" placeholder="300000">
+
+        <button class="action" onclick="calculate()" data-i18n="calculateButton">Kora ibarura</button>
+        <div id="calculationResult" class="result" hidden aria-live="polite"></div>
+
+        <p class="notice" data-i18n="calculationNote">
+          Iri barura rigaragaza itandukaniro ry'amafaranga winjije n'ayo wakoresheje gusa. Ntiribarira umusoro ugomba kwishyurwa.
+        </p>
+      </div>
+    </section>
+
+    <!-- IGENZURA -->
+    <section id="checklist" class="page" hidden>
+      <div class="card">
+        <h2 data-i18n="checklistTitle">Igenzura ry'ubucuruzi bwawe</h2>
+        <p data-i18n="checklistIntro">Subiza ibibazo bikurikira kugira ngo ubone urutonde rw'ibintu wakwibuka kugenzura.</p>
+
+        <label for="businessType" data-i18n="businessTypeLabel">Ubucuruzi bwawe ni ubuhe?</label>
+        <select id="businessType">
+          <option value="individual" data-i18n="businessIndividual">Ubucuruzi bw'umuntu ku giti cye</option>
+          <option value="company" data-i18n="businessCompany">Ikigo cyangwa sosiyete</option>
+          <option value="other" data-i18n="businessOther">Ubundi bwoko</option>
+        </select>
+
+        <label for="registered" data-i18n="registeredLabel">Ubucuruzi bwanditswe?</label>
+        <select id="registered">
+          <option value="unknown" data-i18n="unknown">Sindabimenya</option>
+          <option value="yes" data-i18n="yes">Yego</option>
+          <option value="no" data-i18n="no">Oya</option>
+        </select>
+
+        <label for="employees" data-i18n="employeesLabel">Ufite abakozi uhemba?</label>
+        <select id="employees">
+          <option value="unknown" data-i18n="unknown">Sindabimenya</option>
+          <option value="yes" data-i18n="yes">Yego</option>
+          <option value="no" data-i18n="no">Oya</option>
+        </select>
+
+        <button class="action" onclick="makeChecklist()" data-i18n="createList">Kora urutonde</button>
+        <div id="checklistResult" class="result" hidden aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- AMAKURU YEMEWE -->
+    <section id="official" class="page" hidden>
+      <div class="card">
+        <h2 data-i18n="officialTitle">Aho wabonera amakuru yemewe</h2>
+        <p data-i18n="officialIntro">Kugira ngo umenye amabwiriza agezweho, koresha imbuga z'inzego zibifitiye ububasha.</p>
+
+        <h3 data-i18n="rraTitle">Ikigo cy'Imisoro n'Amahoro (RRA)</h3>
+        <p data-i18n="rraText">Amakuru ajyanye n'imisoro, serivisi z'abasora n'amabwiriza yemewe.</p>
+        <a href="https://www.rra.gov.rw/" target="_blank" rel="noopener noreferrer" data-i18n="rraLink">Sura urubuga rwa RRA</a>
+
+        <hr style="border:0;border-top:1px solid #dce9df;margin:22px 0;">
+
+        <h3 data-i18n="nisrTitle">Ikigo cy'Igihugu cy'Ibarurishamibare (NISR)</h3>
+        <p data-i18n="nisrText">Amakuru n'imibare byifashishwa mu gusobanukirwa ubukungu n'imibereho y'abaturage.</p>
+        <a href="https://www.statistics.gov.rw/" target="_blank" rel="noopener noreferrer" data-i18n="nisrLink">Sura urubuga rwa NISR</a>
+
+        <div class="notice" data-i18n="officialNote">
+          Igihe ufata icyemezo kijyanye n'imisoro, banza wemeze ibisabwa n'igihe ntarengwa ku rubuga rwa RRA cyangwa ubaze RRA.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span data-i18n="footerText">TaxHelper Rwanda AI — Umufasha mu gusobanukirwa imisoro.</span>
+  </footer>
+
+  <script>
+    const translations = {
+      rw: {
+        navHome: "Ahabanza",
+        navQuestions: "Baza ikibazo",
+        navRecords: "Ibarura ry'ubucuruzi",
+        navChecklist: "Igenzura",
+        navOfficial: "Amakuru yemewe",
+        heroTitle: "Sobanukirwa imisoro, uteze imbere ubucuruzi bwawe",
+        heroText: "Umufasha ugufasha kumenya amakuru rusange ku misoro, kubika ibarura ry'ubucuruzi no kumenya aho wabonera amakuru yemewe.",
+        startButton: "Tangira hano",
+        feature1Title: "💬 Ibibazo ku misoro",
+        feature1Text: "Reba ibisubizo by'ibibazo bikunze kubazwa ku misoro.",
+        feature2Title: "📊 Ibarura ry'ubucuruzi",
+        feature2Text: "Gerageza kubara amafaranga winjije, ayo wakoresheje n'inyungu cyangwa igihombo.",
+        feature3Title: "✅ Igenzura ry'inshingano",
+        feature3Text: "Kora urutonde rw'ibintu wakwibuka kugenzura mu bucuruzi bwawe.",
+        learnMore: "Reba ibisobanuro",
+        calculateButton: "Kora ibarura",
+        checkNow: "Tangira igenzura",
+        disclaimer: "Iyi porogaramu itanga amakuru rusange. Ntisimbura ubujyanama bwemewe bw'Ikigo cy'Imisoro n'Amahoro.",
+        questionsTitle: "Baza ikibazo ku misoro",
+        questionsIntro: "Hitamo ikibazo kugira ngo ubone igisubizo rusange.",
+        chooseQuestion: "Hitamo ikibazo",
+        qRegister: "Nandikisha nte ubucuruzi?",
+        qDeclaration: "Ni iki kumenyekanisha imisoro bivuze?",
+        qVat: "Umusoro ku nyongeragaciro ni iki?",
+        qRecords: "Ni izihe nyandiko nkwiye kubika?",
+        qPayment: "Ni hehe nabonera amakuru yo kwishyura imisoro?",
+        qOther: "Mfite ikindi kibazo",
+        getAnswer: "Reba igisubizo",
+        notAI: "Ibisubizo biri muri iyi ngerageza byateguwe mbere. Ntabwo ari ikiganiro n'ubwenge buhangano nyakuri.",
+        recordsTitle: "Ibarura ry'amafaranga y'ubucuruzi",
+        recordsIntro: "Andika amafaranga winjije n'ayo wakoresheje kugira ngo ubare inyungu cyangwa igihombo.",
+        incomeLabel: "Amafaranga winjije (RWF)",
+        expensesLabel: "Amafaranga wakoresheje (RWF)",
+        calculationNote: "Iri barura rigaragaza itandukaniro ry'amafaranga winjije n'ayo wakoresheje gusa. Ntiribarira umusoro ugomba kwishyurwa.",
+        checklistTitle: "Igenzura ry'ubucuruzi bwawe",
+        checklistIntro: "Subiza ibibazo bikurikira kugira ngo ubone urutonde rw'ibintu wakwibuka kugenzura.",
+        businessTypeLabel: "Ubucuruzi bwawe ni ubuhe?",
+        businessIndividual: "Ubucuruzi bw'umuntu ku giti cye",
+        businessCompany: "Ikigo cyangwa sosiyete",
+        businessOther: "Ubundi bwoko",
+        registeredLabel: "Ubucuruzi bwanditswe?",
+        employeesLabel: "Ufite abakozi uhemba?",
+        unknown: "Sindabimenya",
+        yes: "Yego",
+        no: "Oya",
+        createList: "Kora urutonde",
+        officialTitle: "Aho wabonera amakuru yemewe",
+        officialIntro: "Kugira ngo umenye amabwiriza agezweho, koresha imbuga z'inzego zibifitiye ububasha.",
+        rraTitle: "Ikigo cy'Imisoro n'Amahoro (RRA)",
+        rraText: "Amakuru ajyanye n'imisoro, serivisi z'abasora n'amabwiriza yemewe.",
+        rraLink: "Sura urubuga rwa RRA",
+        nisrTitle: "Ikigo cy'Igihugu cy'Ibarurishamibare (NISR)",
+        nisrText: "Amakuru n'imibare byifashishwa mu gusobanukirwa ubukungu n'imibereho y'abaturage.",
+        nisrLink: "Sura urubuga rwa NISR",
+        officialNote: "Igihe ufata icyemezo kijyanye n'imisoro, banza wemeze ibisabwa n'igihe ntarengwa ku rubuga rwa RRA cyangwa ubaze RRA.",
+        footerText: "TaxHelper Rwanda AI — Umufasha mu gusobanukirwa imisoro.",
+        answerRegister: "Kugira ngo umenye uko wandikisha ubucuruzi, reba amabwiriza agezweho ku rubuga rwa RRA. Ibisabwa bishobora guterwa n'ubwoko bw'ubucuruzi bwawe.",
+        answerDeclaration: "Kumenyekanisha imisoro ni ugutanga amakuru asabwa ku musoro wawe mu gihe no mu buryo biteganywa n'amategeko. Reba kuri RRA kugira ngo umenye ibisabwa bikureba.",
+        answerVat: "Umusoro ku nyongeragaciro ni umusoro ushyirwa ku bicuruzwa cyangwa serivisi bimwe na bimwe. Ntabwo buri bucuruzi bwose busabwa kuwishyura mu buryo bumwe; genzura ibisabwa kuri RRA.",
+        answerRecords: "Bika inyemezabwishyu, inyandiko z'ibyaguzwe n'ibyagurishijwe, amafaranga yinjiye n'ayasohotse, hamwe n'inyandiko z'imisoro. Reba ibisabwa byemewe kuri RRA.",
+        answerPayment: "Koresha urubuga rwemewe rwa RRA kugira ngo umenye uburyo bwo kwishyura, konti cyangwa serivisi zemewe n'igihe ntarengwa.",
+        answerOther: "Kuri iki kibazo, genzura amakuru ku rubuga rwa RRA cyangwa ubaze Ikigo cy'Imisoro n'Amahoro kugira ngo ubone igisubizo kijyanye n'ibyo ukeneye.",
+        incomeError: "Andika amafaranga winjije n'ayo wakoresheje, kandi urebe ko atari munsi ya zeru.",
+        profit: "Inyungu",
+        loss: "Igihombo",
+        breakEven: "Nta nyungu cyangwa igihombo",
+        totalIncome: "Amafaranga winjije",
+        totalExpenses: "Amafaranga wakoresheje",
+        difference: "Itandukaniro",
+        checklistHeading: "Urutonde rw'ibyo kugenzura",
+        registrationTip: "Genzura niba ugomba kwandikisha ubucuruzi bwawe n'inzego zibishinzwe.",
+        registrationYes: "Wavuze ko ubucuruzi bwawe bwanditswe. Bika ibyangombwa kandi ugenzure niba amakuru abirimo akiri yo.",
+        registrationNo: "Wavuze ko ubucuruzi bwawe butanditswe. Baza inzego zibishinzwe niba ugomba kubwandikisha.",
+        registrationUnknown: "Emeza niba ubucuruzi bwawe bwaranditswe kandi niba hari ibindi byangombwa bisabwa.",
+        employeeTip: "Niba uhemba abakozi, genzura niba hari inshingano z'imisoro cyangwa izindi nshingano zijyanye n'abakozi zikureba.",
+        noEmployeeTip: "Nubwo utagira abakozi, genzura izindi nshingano z'imisoro zijyanye n'ubucuruzi bwawe.",
+        businessTypeTip: "Ibisabwa bishobora gutandukana bitewe n'ubwoko bw'ubucuruzi. Emeza ibyerekeye ubucuruzi bwawe kuri RRA.",
+        checklistWarning: "Uru ni urutonde rusange, si icyemezo cy'uko ugomba kwishyura umusoro runaka. Emeza inshingano zawe kuri RRA."
+      },
+
+      en: {
+        navHome: "Home",
+        navQuestions: "Ask a question",
+        navRecords: "Business records",
+        navChecklist: "Checklist",
+        navOfficial: "Official information",
+        heroTitle: "Understand taxes and grow your business",
+        heroText: "A helper for general tax information, basic business records, and finding official sources.",
+        startButton: "Get started",
+        feature1Title: "💬 Tax questions",
+        feature1Text: "Explore answers to common tax questions.",
+        feature2Title: "📊 Business records",
+        feature2Text: "Calculate your income, expenses, and profit or loss.",
+        feature3Title: "✅ Business checklist",
+        feature3Text: "Create a list of things to check for your business.",
+        learnMore: "Learn more",
+        calculateButton: "Calculate",
+        checkNow: "Start checklist",
+        disclaimer: "This application provides general information. It does not replace official advice from the Rwanda Revenue Authority.",
+        questionsTitle: "Ask a tax question",
+        questionsIntro: "Choose a question to view general guidance.",
+        chooseQuestion: "Choose a question",
+        qRegister: "How do I register a business?",
+        qDeclaration: "What does filing a tax declaration mean?",
+        qVat: "What is Value Added Tax?",
+        qRecords: "Which business records should I keep?",
+        qPayment: "Where can I find official tax payment information?",
+        qOther: "I have another question",
+        getAnswer: "View answer",
+        notAI: "The answers in this prototype are pre-written. This is not yet a real AI conversation.",
+        recordsTitle: "Business financial records",
+        recordsIntro: "Enter your income and expenses to calculate your profit or loss.",
+        incomeLabel: "Income (RWF)",
+        expensesLabel: "Expenses (RWF)",
+        calculationNote: "This calculation only shows the difference between income and expenses. It does not calculate tax payable.",
+        checklistTitle: "Your business checklist",
+        checklistIntro: "Answer these questions to create a general checklist of things to review.",
+        businessTypeLabel: "What type of business do you have?",
+        businessIndividual: "Sole proprietor",
+        businessCompany: "Company",
+        businessOther: "Other type",
+        registeredLabel: "Is the business registered?",
+        employeesLabel: "Do you pay employees?",
+        unknown: "Not sure",
+        yes: "Yes",
+        no: "No",
+        createList: "Create checklist",
+        officialTitle: "Where to find official information",
+        officialIntro: "Use official government sources to check current rules and requirements.",
+        rraTitle: "Rwanda Revenue Authority (RRA)",
+        rraText: "Tax information, taxpayer services, and official guidance.",
+        rraLink: "Visit the RRA website",
+        nisrTitle: "National Institute of Statistics of Rwanda (NISR)",
+        nisrText: "Statistics and information for understanding the economy and people's living conditions.",
+        nisrLink: "Visit the NISR website",
+        officialNote: "Before making a tax decision, confirm the requirements and deadlines on the RRA website or contact the RRA.",
+        footerText: "TaxHelper Rwanda AI — Your guide to understanding taxes.",
+        answerRegister: "To learn how to register your business, check the current guidance on the RRA website. Requirements may depend on your business type.",
+        answerDeclaration: "Filing a tax declaration means submitting required information about your tax within the legally required time and format. Check the RRA website for requirements that apply to you.",
+        answerVat: "Value Added Tax is a tax applied to certain goods or services. The same rules do not necessarily apply to every business; confirm the requirements with the RRA.",
+        answerRecords: "Keep receipts, purchase and sales records, income and expense records, and tax documents. Check the RRA website for official record-keeping requirements.",
+        answerPayment: "Use the official RRA website to check accepted payment methods, official services, and deadlines.",
+        answerOther: "For this question, check the RRA website or contact the Rwanda Revenue Authority for guidance relevant to your situation.",
+        incomeError: "Enter your income and expenses, and make sure neither value is negative.",
+        profit: "Profit",
+        loss: "Loss",
+        breakEven: "Break-even",
+        totalIncome: "Income",
+        totalExpenses: "Expenses",
+        difference: "Difference",
+        checklistHeading: "Your checklist",
+        registrationTip: "Check whether your business needs to be registered with the relevant authorities.",
+        registrationYes: "You indicated that your business is registered. Keep your documents and check that the details are up to date.",
+        registrationNo: "You indicated that your business is not registered. Ask the relevant authorities whether registration is required.",
+        registrationUnknown: "Confirm whether your business is registered and whether additional documents are required.",
+        employeeTip: "If you pay employees, check whether employer tax or other employee-related obligations apply to you.",
+        noEmployeeTip: "Even if you do not have employees, check the other tax obligations that may apply to your business.",
+        businessTypeTip: "Requirements can vary by business type. Confirm the rules that apply to your business with the RRA.",
+        checklistWarning: "This is a general checklist, not a determination that you owe a particular tax. Confirm your obligations with the RRA."
+      }
+    };
+
+    let currentLanguage = "rw";
+
+    function t(key) {
+      return translations[currentLanguage][key] || key;
+    }
+
+    function changeLanguage(language) {
+      currentLanguage = translations[language] ? language : "rw";
+
+      document.documentElement.lang = currentLanguage;
+      document.getElementById("languageSelect").value = currentLanguage;
+
+      try {
+        localStorage.setItem("taxhelper-language", currentLanguage);
+      } catch (error) {
+        // The site still works if browser storage is unavailable.
+      }
+
+      document.querySelectorAll("[data-i18n]").forEach(element => {
+        const key = element.dataset.i18n;
+        const translation = translations[currentLanguage][key];
+
+        if (typeof translation === "string") {
+          element.textContent = translation;
+        }
+      });
+
+      document.getElementById("answerResult").replaceChildren();
+      document.getElementById("answerResult").hidden = true;
+
+      document.getElementById("calculationResult").replaceChildren();
+      document.getElementById("calculationResult").hidden = true;
+
+      document.getElementById("checklistResult").replaceChildren();
+      document.getElementById("checklistResult").hidden = true;
+    }
+
+    function showPage(pageId) {
+      document.querySelectorAll(".page").forEach(page => {
+        page.hidden = page.id !== pageId;
+      });
+
+      document.querySelectorAll("nav button[data-page]").forEach(button => {
+        button.classList.toggle("active", button.dataset.page === pageId);
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function answerQuestion() {
+      const question = document.getElementById("questionSelect").value;
+      const answerKeys = {
+        register: "answerRegister",
+        declaration: "answerDeclaration",
+        vat: "answerVat",
+        records: "answerRecords",
+        payment: "answerPayment",
+        other: "answerOther"
+      };
+
+      const result = document.getElementById("answerResult");
+      result.textContent = t(answerKeys[question]);
+      result.hidden = false;
+
+      const link = document.createElement("p");
+      const anchor = document.createElement("a");
+      anchor.href = "https://www.rra.gov.rw/";
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.textContent = t("rraLink");
+      link.appendChild(anchor);
+      result.appendChild(link);
+    }
+
+    function formatMoney(value) {
+      return new Intl.NumberFormat(
+        currentLanguage === "rw" ? "rw-RW" : "en-GB",
+        { maximumFractionDigits: 0 }
+      ).format(value) + " RWF";
+    }
+
+    function calculate() {
+      const incomeField = document.getElementById("income");
+      const expensesField = document.getElementById("expenses");
+      const result = document.getElementById("calculationResult");
+
+      const income = Number(incomeField.value);
+      const expenses = Number(expensesField.value);
+
+      if (
+        incomeField.value.trim() === "" ||
+        expensesField.value.trim() === "" ||
+        !Number.isFinite(income) ||
+        !Number.isFinite(expenses) ||
+        income < 0 ||
+        expenses < 0
+      ) {
+        result.textContent = t("incomeError");
+        result.hidden = false;
+        return;
+      }
+
+      const difference = income - expenses;
+      let outcome = t("breakEven");
+
+      if (difference > 0) outcome = t("profit");
+      if (difference < 0) outcome = t("loss");
+
+      result.replaceChildren();
+
+      const heading = document.createElement("h3");
+      heading.textContent = outcome;
+      result.appendChild(heading);
+
+      [
+        [t("totalIncome"), formatMoney(income)],
+        [t("totalExpenses"), formatMoney(expenses)],
+        [t("difference"), formatMoney(Math.abs(difference))]
+      ].forEach(([label, value]) => {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = label + ": " + value;
+        result.appendChild(paragraph);
+      });
+
+      result.hidden = false;
+    }
+
+    function makeChecklist() {
+      const registered = document.getElementById("registered").value;
+      const employees = document.getElementById("employees").value;
+      const result = document.getElementById("checklistResult");
+
+      let registrationMessage = "registrationUnknown";
+
+      if (registered === "yes") registrationMessage = "registrationYes";
+      if (registered === "no") registrationMessage = "registrationNo";
+
+      result.replaceChildren();
+
+      const heading = document.createElement("h3");
+      heading.textContent = t("checklistHeading");
+      result.appendChild(heading);
+
+      const items = [
+        registrationMessage,
+        employees === "yes" ? "employeeTip" : "noEmployeeTip",
+        "businessTypeTip",
+        "registrationTip"
+      ];
+
+      items.forEach(key => {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = "• " + t(key);
+        result.appendChild(paragraph);
+      });
+
+      const warning = document.createElement("p");
+      warning.className = "notice";
+      warning.textContent = t("checklistWarning");
+      result.appendChild(warning);
+
+      result.hidden = false;
+    }
+
+    // Restore the user's previously selected language.
+    try {
+      const savedLanguage = localStorage.getItem("taxhelper-language");
+      if (savedLanguage && translations[savedLanguage]) {
+        changeLanguage(savedLanguage);
+      } else {
+        changeLanguage("rw");
+      }
+    } catch (error) {
+      changeLanguage("rw");
+    }
+  </script>
+</body>
+</html>
